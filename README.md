@@ -76,6 +76,8 @@ swift run zest convert photo.png  photo.webp --quality 0.75 # cwebp
 swift run zest convert photo.heic clean.heic                # lossless, offset-preserving metadata strip
 swift run zest inspect clean.heic                           # report remaining metadata
 swift run zest url "zest://convert?input=photo.heic&to=jpg&quality=0.8"   # URL-scheme automation
+
+./Scripts/package-app.sh    # -> dist/Zest.app; registers the zest:// scheme system-wide
 ```
 
 Verified on this machine (Swift 6.4, Command Line Tools): `swift build` clean,
@@ -104,10 +106,14 @@ drives the same `ConversionEngine.standard()`:
   in-process; it surfaces in the Shortcuts app once shipped inside a real `.app`
   bundle, where the AppIntents metadata extractor runs.
 
-**Packaging note.** A shipping build wraps `ZestApp` in a `.app` whose Info.plist
-declares `LSUIElement`, `CFBundleURLTypes` (scheme `zest`), and the AppIntents
-metadata — at which point the URL scheme and the Shortcuts action are live
-system-wide. The engine, parser, and intents are all in place for that step.
+**Packaging.** `Scripts/package-app.sh` builds release, assembles
+`dist/Zest.app` (Info.plist with `LSUIElement` + `CFBundleURLTypes` for `zest`),
+ad-hoc signs it, and registers it with Launch Services. After that,
+`open "zest://convert?input=…&to=…"` routes to the app **system-wide** — verified:
+a `zest://…&to=jpg` link produced the JPG with no terminal involved. The
+AppIntents "Convert File" action additionally needs a full Xcode build (the
+`appintentsmetadataprocessor` isn't in the Command Line Tools); the URL scheme
+does not.
 
 ## Licensing (must be honored before distribution)
 

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Zest</string>
+    <key>CFBundleDisplayName</key>
+    <string>Zest</string>
+    <key>CFBundleIdentifier</key>
+    <string>app.zest.ZestApp</string>
+    <key>CFBundleExecutable</key>
+    <string>ZestApp</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Zest — clean-room file converter.</string>
+
+    <!-- Menu-bar agent: no Dock icon, no app menu. -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <!-- URL scheme: zest://convert?input=…&to=… -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>app.zest.url</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>zest</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

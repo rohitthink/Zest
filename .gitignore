@@ -11,3 +11,7 @@ xcuserdata/
 
 # macOS
 .DS_Store
+
+# Packaged app bundle (build artifact)
+dist/
+*.app
