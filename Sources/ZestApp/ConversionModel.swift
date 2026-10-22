@@ -19,9 +19,11 @@ final class ConversionModel: ObservableObject {
     @Published private(set) var state: State = .idle
 
     private let engine = ConversionEngine.standard()
+    private var generation = 0   // bumped on each new request; a stale Task's result is dropped
 
     /// A file was dropped — resolve its format and the reachable targets.
     func accept(_ url: URL) {
+        generation &+= 1   // a new drop supersedes any in-flight conversion
         guard let source = MediaFormat.fromURL(url) else {
             state = .failed("Unsupported file type: .\(url.pathExtension)")
             return
@@ -36,6 +38,8 @@ final class ConversionModel: ObservableObject {
 
     /// Run a conversion to the chosen target. Output lands beside the source.
     func convert(file: URL, source: MediaFormat, to target: MediaFormat) {
+        generation &+= 1
+        let token = generation
         state = .converting(target)
         let output = defaultOutputURL(for: file, target: target)
         let request = ConversionRequest(input: file, output: output, source: source, target: target,
@@ -44,17 +48,19 @@ final class ConversionModel: ObservableObject {
         Task {
             do {
                 let result = try await engine.run(request)   // runs off the main actor
-                state = .done(output: result.output, bytes: result.bytes)
+                if token == generation { state = .done(output: result.output, bytes: result.bytes) }
             } catch {
-                state = .failed("\(error)")
+                if token == generation { state = .failed("\(error)") }
             }
         }
     }
 
-    func reset() { state = .idle }
+    func reset() { generation &+= 1; state = .idle }
 
     /// Run a parsed `zest://convert?…` command (the URL-scheme automation surface).
     func run(_ command: ZestURLCommand) {
+        generation &+= 1
+        let token = generation
         guard let source = MediaFormat.fromURL(command.input) else {
             state = .failed("Unsupported input: .\(command.input.pathExtension)")
             return
@@ -72,9 +78,9 @@ final class ConversionModel: ObservableObject {
         Task {
             do {
                 let result = try await engine.run(request)
-                state = .done(output: result.output, bytes: result.bytes)
+                if token == generation { state = .done(output: result.output, bytes: result.bytes) }
             } catch {
-                state = .failed("\(error)")
+                if token == generation { state = .failed("\(error)") }
             }
         }
     }

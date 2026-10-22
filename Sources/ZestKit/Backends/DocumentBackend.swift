@@ -53,13 +53,15 @@ public struct DocumentBackend: Converter {
         } else if s == "pdf", t == "txt" || t == "md" {
             try pdfToText(request)
         } else if s == "pdf", Self.attrWritable.contains(t) {
-            try write(attributed: NSAttributedString(string: pdfText(request.input)), to: request.output, id: t)
+            let text = pdfText(request.input)
+            try await MainActor.run { try self.write(attributed: NSAttributedString(string: text), to: request.output, id: t) }
         } else if request.source.category == .image, t == "pdf" {
             try imageToPDF(request)
         } else if Self.attrReadable.contains(s), t == "pdf" {
-            try docToPDF(read(request.input, id: s), to: request.output)
+            // NSAttributedString's HTML importer is WebKit-backed and must run on the main actor.
+            try await MainActor.run { try self.docToPDF(self.read(request.input, id: s), to: request.output) }
         } else if Self.attrReadable.contains(s), Self.attrWritable.contains(t) {
-            try write(attributed: read(request.input, id: s), to: request.output, id: t)
+            try await MainActor.run { try self.write(attributed: self.read(request.input, id: s), to: request.output, id: t) }
         } else {
             throw ConversionError.unsupportedPair(request.source, request.target)
         }
@@ -106,22 +108,25 @@ public struct DocumentBackend: Converter {
             throw ConversionError.io("could not create PDF context")
         }
         let framesetter = CTFramesetterCreateWithAttributedString(attributed as CFAttributedString)
-        let textRect = CGRect(x: margin, y: margin, width: pageSize.width - 2 * margin, height: pageSize.height - 2 * margin)
+        // A CGPDFContext is already bottom-left / y-up — the orientation CoreText
+        // expects — so draw directly, with NO flip (flipping rendered text
+        // upside-down and bottom-anchored). The frame fills from its top edge down.
+        let path = CGPath(rect: CGRect(x: margin, y: margin,
+                                       width: pageSize.width - 2 * margin,
+                                       height: pageSize.height - 2 * margin), transform: nil)
         var cursor = 0
         let total = attributed.length
-        repeat {
+        while cursor < total {
             context.beginPDFPage(nil)
             context.textMatrix = .identity
-            context.translateBy(x: 0, y: pageSize.height)
-            context.scaleBy(x: 1, y: -1)
-            let path = CGPath(rect: CGRect(x: margin, y: margin, width: textRect.width, height: textRect.height), transform: nil)
             let frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(cursor, 0), path, nil)
             CTFrameDraw(frame, context)
             let visible = CTFrameGetVisibleStringRange(frame)
             context.endPDFPage()
-            if visible.length == 0 { break }
-            cursor += visible.length
-        } while cursor < total
+            // Advance by what fit; if nothing fit (a run taller than the page),
+            // step one glyph so content is neither dropped silently nor looped forever.
+            cursor += visible.length > 0 ? visible.length : 1
+        }
         context.closePDF()
     }
 
@@ -131,6 +136,9 @@ public struct DocumentBackend: Converter {
 
     private func pdfToText(_ request: ConversionRequest) throws {
         let text = pdfText(request.input)
+        guard !text.isEmpty else {
+            throw ConversionError.io("no extractable text in PDF (an image-only/scanned PDF needs OCR)")
+        }
         try text.data(using: .utf8)?.write(to: request.output)
     }
 

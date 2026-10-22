@@ -31,7 +31,7 @@ struct ConvertFileIntent: AppIntent {
         }
         let engine = ConversionEngine.standard()
         let result = try await engine.convertFile(at: url, toFormat: target,
-                                                  options: ConversionOptions(quality: quality))
+                                                  options: ConversionOptions(quality: min(max(quality, 0), 1)))
         return .result(value: IntentFile(fileURL: result.output))
     }
 }

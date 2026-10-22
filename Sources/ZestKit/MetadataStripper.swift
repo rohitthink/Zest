@@ -128,6 +128,7 @@ public enum MetadataStripper {
         let children = boxes(b, meta.contentStart + 4, meta.end)
         lines.append("meta children: " + children.map(\.type).joined(separator: " "))
         guard let iinf = children.first(where: { $0.type == "iinf" }) else { return (lines + ["no iinf"]).joined(separator: "\n") }
+        guard b.indices.contains(iinf.contentStart) else { return (lines + ["iinf truncated"]).joined(separator: "\n") }
         let iinfVersion = Int(b[iinf.contentStart])
         var p = iinf.contentStart + 4
         let countSize = iinfVersion == 0 ? 2 : 4
@@ -136,6 +137,7 @@ public enum MetadataStripper {
         lines.append("iinf v\(iinfVersion) entry_count=\(count)")
         var items: [(Int, String)] = []
         for entry in boxes(b, p, iinf.end) where entry.type == "infe" {
+            guard b.indices.contains(entry.contentStart) else { continue }
             let ev = Int(b[entry.contentStart])
             var q = entry.contentStart + 4
             let idSize = ev >= 3 ? 4 : 2
@@ -146,6 +148,7 @@ public enum MetadataStripper {
         }
         lines.append("infe items: " + items.map { "\($0.0):\($0.1)" }.joined(separator: " "))
         guard let iloc = children.first(where: { $0.type == "iloc" }) else { return (lines + ["no iloc"]).joined(separator: "\n") }
+        guard b.indices.contains(iloc.contentStart) else { return (lines + ["iloc truncated"]).joined(separator: "\n") }
         let ilocVersion = Int(b[iloc.contentStart])
         lines.append("iloc v\(ilocVersion)")
         var r = iloc.contentStart + 4

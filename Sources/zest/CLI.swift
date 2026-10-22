@@ -66,6 +66,7 @@ struct ZestCLI {
             case "--keep-metadata":
                 options.stripMetadata = false
             default:
+                if args[index].hasPrefix("-") { fail("unknown option: \(args[index])") }
                 positional.append(args[index])
             }
             index += 1

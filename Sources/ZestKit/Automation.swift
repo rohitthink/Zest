@@ -10,9 +10,13 @@ public enum ByteSize {
         ]
         for (suffix, multiplier) in units where lower.hasSuffix(suffix) {
             let number = lower.dropLast(suffix.count).trimmingCharacters(in: .whitespaces)
-            if let value = Double(number) { return Int(value * multiplier) }
+            guard let value = Double(number) else { return nil }
+            let scaled = value * multiplier
+            guard scaled.isFinite, scaled >= 0, scaled <= Double(Int.max) else { return nil }   // no trap on inf/NaN/overflow/negative
+            return Int(scaled)
         }
-        return Int(lower)
+        guard let value = Int(lower), value >= 0 else { return nil }
+        return value
     }
 }
 
@@ -21,13 +25,18 @@ public enum ByteSize {
 public func defaultOutputURL(for input: URL, target: MediaFormat) -> URL {
     let directory = input.deletingLastPathComponent()
     let stem = input.deletingPathExtension().lastPathComponent
-    var candidate = directory.appendingPathComponent(stem).appendingPathExtension(target.primaryExtension)
-    var suffix = 2
-    while FileManager.default.fileExists(atPath: candidate.path) {
-        candidate = directory.appendingPathComponent("\(stem) (\(suffix))").appendingPathExtension(target.primaryExtension)
+    var suffix = 1
+    while true {
+        let name = suffix == 1 ? stem : "\(stem) (\(suffix))"
+        let candidate = directory.appendingPathComponent(name).appendingPathExtension(target.primaryExtension)
+        // Reserve the name atomically (O_EXCL) so two concurrent conversions can't
+        // resolve to the same not-yet-written path and clobber each other.
+        let fd = open(candidate.path, O_CREAT | O_EXCL | O_WRONLY, 0o644)
+        if fd >= 0 { close(fd); return candidate }
+        if errno != EEXIST { return candidate }     // some other error: best effort
         suffix += 1
+        if suffix > 10_000 { return candidate }      // safety valve
     }
-    return candidate
 }
 
 public extension ConversionEngine {

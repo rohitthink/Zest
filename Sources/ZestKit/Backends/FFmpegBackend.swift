@@ -58,7 +58,8 @@ public struct FFmpegBackend: Converter {
             }
         case .video:
             if let maxDim = request.options.maxDimension {
-                args += ["-vf", "scale='min(\(maxDim),iw)':'min(\(maxDim),ih)':force_original_aspect_ratio=decrease"]
+                // force_original_aspect_ratio can produce an odd side; round to even so libx264/yuv420p accepts it.
+                args += ["-vf", "scale='min(\(maxDim),iw)':'min(\(maxDim),ih)':force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2"]
             }
             if let kbps = bitrateKbps {
                 args += ["-b:v", "\(kbps)k", "-maxrate", "\(kbps)k", "-bufsize", "\(kbps * 2)k"]
@@ -106,7 +107,8 @@ public struct FFmpegBackend: Converter {
         let budget = Double(targetBytes) * 8.0 / duration / 1000.0 * 0.94
         var low = 8.0
         var high = max(budget, 16.0)
-        var best: (bytes: Int, kbps: Int)?
+        var closest: (bytes: Int, kbps: Int)?       // nearest by distance — for error reporting only
+        var bestUnder: (bytes: Int, kbps: Int)?     // largest result still within budget
         let tolerance = 0.06
         let maxAttempts = 6
 
@@ -116,26 +118,21 @@ public struct FFmpegBackend: Converter {
             let out = try ProcessRunner.run(ffmpeg, baseArgs(for: request, bitrateKbps: kbps))
             guard out.code == 0 else { throw ConversionError.toolFailed(code: out.code, stderr: out.stderr) }
             let bytes = fileSize(request.output)
-            if best == nil || abs(bytes - targetBytes) < abs(best!.bytes - targetBytes) {
-                best = (bytes, kbps)
-            }
-            let ratio = Double(bytes) / Double(targetBytes)
-            if abs(1.0 - ratio) <= tolerance {
+            if closest == nil || abs(bytes - targetBytes) < abs(closest!.bytes - targetBytes) { closest = (bytes, kbps) }
+            if bytes <= targetBytes, bestUnder == nil || bytes > bestUnder!.bytes { bestUnder = (bytes, kbps) }
+            // Accept only when within tolerance AND within budget (target-size is a cap).
+            if bytes <= targetBytes, abs(1.0 - Double(bytes) / Double(targetBytes)) <= tolerance {
                 return ConversionResult(output: request.output, bytes: bytes, elapsed: Date().timeIntervalSince(start), attempts: attempt)
             }
             if bytes > targetBytes { high = Double(kbps) } else { low = Double(kbps) }
         }
 
-        // Settle on the closest-under bitrate found.
-        if let best {
-            _ = try ProcessRunner.run(ffmpeg, baseArgs(for: request, bitrateKbps: best.kbps))
-            let bytes = fileSize(request.output)
-            if bytes > targetBytes {
-                throw ConversionError.targetUnreachable(smallestBytes: bytes, targetBytes: targetBytes)
-            }
-            return ConversionResult(output: request.output, bytes: bytes, elapsed: Date().timeIntervalSince(start), attempts: maxAttempts)
+        // Settle on the best encode that stayed within budget; only fail if none did.
+        if let bestUnder {
+            _ = try ProcessRunner.run(ffmpeg, baseArgs(for: request, bitrateKbps: bestUnder.kbps))
+            return ConversionResult(output: request.output, bytes: fileSize(request.output), elapsed: Date().timeIntervalSince(start), attempts: maxAttempts)
         }
-        throw ConversionError.targetUnreachable(smallestBytes: fileSize(request.output), targetBytes: targetBytes)
+        throw ConversionError.targetUnreachable(smallestBytes: closest?.bytes ?? fileSize(request.output), targetBytes: targetBytes)
     }
 
     // MARK: - Helpers
