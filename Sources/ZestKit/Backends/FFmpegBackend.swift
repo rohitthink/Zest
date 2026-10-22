@@ -49,17 +49,23 @@ public struct FFmpegBackend: Converter {
 
         switch request.target.category {
         case .audio:
+            // Audio only: drop video and cover-art streams, which most audio
+            // containers can't hold (mp3-with-cover → m4a/ogg, video → m4a).
+            args += ["-vn"]
             args += audioCodecArgs(for: request.target)
-            if let kbps = bitrateKbps {
-                args += ["-b:a", "\(kbps)k"]
-            } else if let q = request.options.quality {
-                let kbps = Int(96 + q * (320 - 96))
-                args += ["-b:a", "\(kbps)k"]
+            var kbps = bitrateKbps ?? request.options.quality.map { Int(96 + $0 * (320 - 96)) }
+            if ["opus", "ogg"].contains(request.target.id), let k = kbps {
+                kbps = min(k, 256)   // libopus caps mono at 256 kbps; higher fails outright
             }
+            if let kbps { args += ["-b:a", "\(kbps)k"] }
         case .video:
+            // libx264 with yuv420p needs even sides; round down (also after a
+            // force_original_aspect_ratio downscale, which can make a side odd).
+            let even = "scale=trunc(iw/2)*2:trunc(ih/2)*2"
             if let maxDim = request.options.maxDimension {
-                // force_original_aspect_ratio can produce an odd side; round to even so libx264/yuv420p accepts it.
-                args += ["-vf", "scale='min(\(maxDim),iw)':'min(\(maxDim),ih)':force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2"]
+                args += ["-vf", "scale='min(\(maxDim),iw)':'min(\(maxDim),ih)':force_original_aspect_ratio=decrease,\(even)"]
+            } else if request.target.id != "webm" {
+                args += ["-vf", even]
             }
             if let kbps = bitrateKbps {
                 args += ["-b:v", "\(kbps)k", "-maxrate", "\(kbps)k", "-bufsize", "\(kbps * 2)k"]

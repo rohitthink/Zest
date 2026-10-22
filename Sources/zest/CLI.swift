@@ -36,6 +36,8 @@ struct ZestCLI {
             await runConvert(Array(args.dropFirst()))
         case "url":
             await runURL(Array(args.dropFirst()))
+        case "download":
+            await runDownload(Array(args.dropFirst()))
         case "-h", "--help", "help":
             printUsage()
         default:
@@ -110,6 +112,71 @@ struct ZestCLI {
         }
     }
 
+    /// `zest download <link> [--as option] [--out dir] [--cookies browser]`.
+    /// Without --as it lists what the link offers.
+    static func runDownload(_ args: [String]) async {
+        var positional: [String] = []
+        var option: LinkDownloader.Option?
+        var outDir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        var cookies = LinkDownloader.CookieSource.none
+        var index = 0
+        while index < args.count {
+            switch args[index] {
+            case "--as":
+                index += 1
+                guard index < args.count, let o = LinkDownloader.Option(rawValue: args[index].lowercased()) else {
+                    fail("--as needs one of: \(LinkDownloader.Option.allCases.map(\.rawValue).joined(separator: ", "))")
+                }
+                option = o
+            case "--out":
+                index += 1
+                guard index < args.count else { fail("--out needs a folder") }
+                outDir = URL(fileURLWithPath: (args[index] as NSString).expandingTildeInPath)
+            case "--cookies":
+                index += 1
+                guard index < args.count, let c = LinkDownloader.CookieSource(rawValue: args[index].lowercased()) else {
+                    fail("--cookies needs one of: \(LinkDownloader.CookieSource.allCases.map(\.rawValue).joined(separator: ", "))")
+                }
+                cookies = c
+            default:
+                if args[index].hasPrefix("-") { fail("unknown option: \(args[index])") }
+                positional.append(args[index])
+            }
+            index += 1
+        }
+        guard positional.count == 1, let link = LinkDownloader.link(from: positional[0]) else {
+            fail("usage: zest download <link> [--as best|compatible|m4a|mp3|wav|image] [--out <folder>] [--cookies safari|chrome|brave|firefox|edge]")
+        }
+
+        let downloader = LinkDownloader()
+        do {
+            FileHandle.standardError.write(Data("Reading \(link.host ?? "link")…\n".utf8))
+            let info = try await downloader.inspect(link, cookies: cookies)
+            let offered = LinkDownloader.options(for: info)
+            guard let option else {
+                print("\(info.title)  (\(info.platform.displayName))")
+                for o in offered {
+                    print("  --as \(o.rawValue.padding(toLength: 10, withPad: " ", startingAt: 0)) \(LinkDownloader.label(for: o, info: info)): \(LinkDownloader.detail(for: o, info: info))")
+                }
+                return
+            }
+            guard LinkDownloader.canDeliver(option, info: info) else { fail("this link doesn't offer \(option.rawValue)") }
+            var isFolder: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: outDir.path, isDirectory: &isFolder), isFolder.boolValue else {
+                fail("--out folder doesn't exist: \(outDir.path)")
+            }
+            let file = try await downloader.download(info, as: option, cookies: cookies) { fraction in
+                FileHandle.standardError.write(Data("\r  \(Int(fraction * 100))%   ".utf8))
+            }
+            FileHandle.standardError.write(Data("\r".utf8))
+            let saved = try LinkDownloader.place(file, as: info, in: outDir)
+            let bytes = (try? FileManager.default.attributesOfItem(atPath: saved.path)[.size] as? Int) ?? 0
+            print("✔ \(saved.path)  (\(byteString(bytes)))")
+        } catch {
+            fail("\(error)")
+        }
+    }
+
     static func inspect(_ args: [String]) {
         guard let path = args.first else { fail("usage: zest inspect <file>") }
         let url = URL(fileURLWithPath: path)
@@ -156,6 +223,8 @@ struct ZestCLI {
           zest inspect <file>
           zest convert <input> <output> [options]
           zest url "zest://convert?input=<path>&to=<fmt>[&quality=..&target-size=..]"
+          zest download <link> [--as best|compatible|m4a|mp3|wav|image] [--out <folder>] [--cookies <browser>]
+                                 without --as, lists what the link offers (needs yt-dlp)
 
         OPTIONS:
           --target-size <size>   iterate encode to hit a size (e.g. 2MB, 500kb, 800000)

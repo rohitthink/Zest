@@ -18,25 +18,39 @@ public struct DocumentBackend: Converter {
     public let soffice: URL?
 
     public init(soffice: URL? = nil) {
-        self.soffice = soffice ?? ToolLocator.find("soffice", extraPaths: ["/Applications/LibreOffice.app/Contents/MacOS"])
+        self.soffice = soffice ?? ToolLocator.find("soffice", extraPaths: [
+            "/Applications/LibreOffice.app/Contents/MacOS",
+            NSHomeDirectory() + "/Applications/LibreOffice.app/Contents/MacOS",
+        ])
     }
 
-    /// Formats the AppKit document engine can read / write.
+    /// Formats the AppKit document engine can read / write. (RTFD is read
+    /// only: it's a package, and writing one needs a file wrapper.)
     private static let attrReadable: Set<String> = ["txt", "md", "rtf", "rtfd", "html", "doc", "docx", "odt"]
-    private static let attrWritable: Set<String> = ["txt", "rtf", "rtfd", "html", "doc", "docx", "odt"]
+    private static let attrWritable: Set<String> = ["txt", "rtf", "html", "doc", "docx", "odt"]
     private static let rasterTargets: Set<String> = ["png", "jpg", "tiff"]
-    /// Formats that require LibreOffice (no native path).
-    private static let heavy: Set<String> = ["pptx", "ppt", "xlsx", "xls", "ods", "csv", "tsv"]
+    /// Formats that require LibreOffice (no native path). TSV is left out:
+    /// LibreOffice reads and writes it only through filter options.
+    private static let heavy: Set<String> = ["pptx", "ppt", "xlsx", "xls", "ods", "csv"]
+    /// LibreOffice converts within an application family (Writer, Calc,
+    /// Impress) — a Word file can't become a spreadsheet — or to PDF.
+    private static let families: [Set<String>] = [
+        ["docx", "doc", "odt", "rtf", "txt", "html"],
+        ["xlsx", "xls", "ods", "csv"],
+        ["pptx", "ppt"],
+    ]
+
+    /// True for formats Zest can only convert with LibreOffice installed.
+    public static func needsLibreOffice(_ formatID: String) -> Bool { heavy.contains(formatID) }
 
     public func supports(from source: MediaFormat, to target: MediaFormat) -> Bool {
         let s = source.id, t = target.id
         if s == "pdf", Self.rasterTargets.contains(t) || t == "txt" || t == "md" || Self.attrWritable.contains(t) { return true }
         if source.category == .image, t == "pdf" { return true }
         if Self.attrReadable.contains(s), Self.attrWritable.contains(t) || t == "pdf" { return true }
-        if soffice != nil {                                   // heavy office via LibreOffice
-            let docish = Self.heavy.union(Self.attrReadable).union(["pdf"])
-            if Self.heavy.contains(s), docish.contains(t) { return true }
-            if docish.contains(s), Self.heavy.contains(t) { return true }
+        if soffice != nil, Self.heavy.contains(s) || Self.heavy.contains(t) {   // heavy office via LibreOffice
+            if Self.heavy.contains(s), t == "pdf" { return true }
+            return Self.families.contains { $0.contains(s) && $0.contains(t) }
         }
         return false
     }
@@ -147,7 +161,10 @@ public struct DocumentBackend: Converter {
             throw ConversionError.io("could not open PDF: \(request.input.lastPathComponent)")
         }
         let bounds = page.bounds(for: .mediaBox)
-        let scale: CGFloat = 2.0                               // ~144 dpi
+        var scale: CGFloat = 2.0                               // ~144 dpi
+        if let maxDim = request.options.maxDimension, maxDim > 0 {
+            scale = min(scale, CGFloat(maxDim) / max(bounds.width, bounds.height, 1))
+        }
         let width = max(1, Int(bounds.width * scale)), height = max(1, Int(bounds.height * scale))
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
                                       bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
@@ -163,13 +180,21 @@ public struct DocumentBackend: Converter {
               let dest = CGImageDestinationCreateWithURL(request.output as CFURL, uti as CFString, 1, nil) else {
             throw ConversionError.io("could not create image destination")
         }
-        CGImageDestinationAddImage(dest, image, nil)
+        let properties = request.options.quality.map { [kCGImageDestinationLossyCompressionQuality: $0] as CFDictionary }
+        CGImageDestinationAddImage(dest, image, properties)
         guard CGImageDestinationFinalize(dest) else { throw ConversionError.io("image encode failed") }
     }
 
+    /// Decode to bare pixels first, so the source's EXIF/GPS never rides into
+    /// the PDF, and honour Longest side and Quality.
     private func imageToPDF(_ request: ConversionRequest) throws {
-        guard let image = NSImage(contentsOf: request.input), let page = PDFPage(image: image) else {
+        guard let pixels = ImageBackend.makeUpright(url: request.input, maxPixel: request.options.maxDimension) else {
             throw ConversionError.io("could not load image: \(request.input.lastPathComponent)")
+        }
+        let image = NSImage(cgImage: pixels, size: NSSize(width: pixels.width, height: pixels.height))
+        let quality = request.options.quality ?? 0.85
+        guard let page = PDFPage(image: image, options: [.compressionQuality: quality]) else {
+            throw ConversionError.io("could not make a PDF page from \(request.input.lastPathComponent)")
         }
         let document = PDFDocument()
         document.insert(page, at: 0)

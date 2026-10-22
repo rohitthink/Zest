@@ -9,6 +9,10 @@ import Foundation
 ///             unchanged so the coded image is byte-for-byte untouched.
 public enum MetadataStripper {
 
+    /// Formats with a lossless, byte-level strip. Anything else would need a
+    /// re-encode (lossy, and only the first frame of an animation).
+    public static let losslessFormatIDs: Set<String> = ["jpg", "png", "heic"]
+
     public struct Report: Sendable {
         public var format: String
         public var bytesErased: Int

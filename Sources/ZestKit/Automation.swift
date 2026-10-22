@@ -20,15 +20,24 @@ public enum ByteSize {
     }
 }
 
-/// Choose a non-clobbering output path beside the input (`photo.png`,
-/// `photo (2).png`, …). Shared by every front end.
-public func defaultOutputURL(for input: URL, target: MediaFormat) -> URL {
-    let directory = input.deletingLastPathComponent()
-    let stem = input.deletingPathExtension().lastPathComponent
+/// Choose a non-clobbering output path (`photo.png`, `photo (2).png`, …) beside
+/// the input, or in `directory` when given. `suffix` tags the stem
+/// (`photo-clean.jpg`). Shared by every front end.
+public func defaultOutputURL(for input: URL, target: MediaFormat,
+                             in directory: URL? = nil, suffix: String? = nil) -> URL {
+    let directory = directory ?? input.deletingLastPathComponent()
+    let base = input.deletingPathExtension().lastPathComponent
+    let stem = suffix.map { "\(base)-\($0)" } ?? base
+    return reserveUniqueURL(in: directory, stem: stem, extension: target.primaryExtension)
+}
+
+/// Reserve `stem.ext`, or `stem (2).ext`, … in `directory`: the first name not
+/// taken is created empty (O_EXCL), so two concurrent jobs can't claim it.
+public func reserveUniqueURL(in directory: URL, stem: String, extension ext: String) -> URL {
     var suffix = 1
     while true {
         let name = suffix == 1 ? stem : "\(stem) (\(suffix))"
-        let candidate = directory.appendingPathComponent(name).appendingPathExtension(target.primaryExtension)
+        let candidate = directory.appendingPathComponent(name).appendingPathExtension(ext)
         // Reserve the name atomically (O_EXCL) so two concurrent conversions can't
         // resolve to the same not-yet-written path and clobber each other.
         let fd = open(candidate.path, O_CREAT | O_EXCL | O_WRONLY, 0o644)
@@ -60,7 +69,12 @@ public extension ConversionEngine {
             throw ConversionError.unknownFormat(targetID)
         }
         let out = output ?? defaultOutputURL(for: input, target: target)
-        return try await run(ConversionRequest(input: input, output: out, source: source, target: target, options: options))
+        do {
+            return try await run(ConversionRequest(input: input, output: out, source: source, target: target, options: options))
+        } catch {
+            if output == nil { try? FileManager.default.removeItem(at: out) }   // our reservation or a partial file
+            throw error
+        }
     }
 }
 

@@ -8,15 +8,20 @@ CONFIG="${1:-release}"
 DIST="$ROOT/dist"
 APP="$DIST/Zest.app"
 
-echo ">> building ZestApp ($CONFIG)"
+echo ">> building ZestApp + zest CLI ($CONFIG)"
 swift build -c "$CONFIG" --product ZestApp --package-path "$ROOT"
-BIN="$(swift build -c "$CONFIG" --product ZestApp --package-path "$ROOT" --show-bin-path)/ZestApp"
+swift build -c "$CONFIG" --product zest --package-path "$ROOT"
+BINDIR="$(swift build -c "$CONFIG" --product ZestApp --package-path "$ROOT" --show-bin-path)"
+BIN="$BINDIR/ZestApp"
 [ -x "$BIN" ] || { echo "build output not found: $BIN"; exit 1; }
+[ -x "$BINDIR/zest" ] || { echo "build output not found: $BINDIR/zest"; exit 1; }
 
 echo ">> assembling $APP"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Helpers"
 cp "$BIN" "$APP/Contents/MacOS/ZestApp"
+# The CLI ships inside the app; Settings › Shortcuts shows the one-line symlink.
+cp "$BINDIR/zest" "$APP/Contents/Helpers/zest"
 cp "$ROOT/Packaging/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
@@ -46,3 +51,4 @@ LSREG="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/L
 echo ">> done: $APP"
 echo "   launch:  open \"$APP\""
 echo "   test URL scheme:  open \"zest://convert?input=\$HOME/Desktop/photo.heic&to=jpg\""
+echo "   CLI on PATH:      sudo mkdir -p /usr/local/bin && sudo ln -sf \"$APP/Contents/Helpers/zest\" /usr/local/bin/zest"

@@ -33,8 +33,8 @@ public struct ImageBackend: Converter {
 
         // Fast path: lossless, offset-preserving metadata strip when nothing else changes.
         if options.stripMetadata, request.source.id == request.target.id,
-           options.maxDimension == nil, options.quality == nil,
-           ["jpg", "png", "heic"].contains(request.source.id) {
+           options.maxDimension == nil, options.quality == nil, options.targetSizeBytes == nil,
+           MetadataStripper.losslessFormatIDs.contains(request.source.id) {
             if let data = try? Data(contentsOf: request.input),
                let (stripped, _) = MetadataStripper.strip(data, formatID: request.source.id),
                Self.decodes(stripped) {

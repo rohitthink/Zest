@@ -13,9 +13,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>0.2.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHumanReadableCopyright</key>
@@ -34,6 +34,75 @@
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>zest</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- Finder ▸ Open With ▸ Zest puts the file(s) on the wheel. "Alternate"
+         rank: Zest is offered, never made the default app for these types. -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Convertible File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <!-- Concrete types from MediaFormat.catalog only, so Open With
+                 never offers Zest for files it would then refuse. -->
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.jpeg</string>
+                <string>public.png</string>
+                <string>org.webmproject.webp</string>
+                <string>public.heic</string>
+                <string>public.tiff</string>
+                <string>public.avif</string>
+                <string>com.microsoft.bmp</string>
+                <string>com.compuserve.gif</string>
+                <string>public.mp3</string>
+                <string>public.mpeg-4-audio</string>
+                <string>com.microsoft.waveform-audio</string>
+                <string>org.xiph.flac</string>
+                <string>public.aac-audio</string>
+                <string>public.aiff-audio</string>
+                <string>org.xiph.ogg-audio</string>
+                <string>org.xiph.opus</string>
+                <string>public.mpeg-4</string>
+                <string>com.apple.m4v-video</string>
+                <string>com.apple.quicktime-movie</string>
+                <string>org.matroska.mkv</string>
+                <string>org.webmproject.webm</string>
+                <string>public.avi</string>
+                <string>com.adobe.pdf</string>
+                <string>org.openxmlformats.wordprocessingml.document</string>
+                <string>com.microsoft.word.doc</string>
+                <string>public.rtf</string>
+                <string>com.apple.rtfd</string>
+                <string>org.oasis-open.opendocument.text</string>
+                <string>public.html</string>
+                <string>net.daringfireball.markdown</string>
+                <string>org.openxmlformats.presentationml.presentation</string>
+                <string>com.microsoft.powerpoint.ppt</string>
+                <string>org.openxmlformats.spreadsheetml.sheet</string>
+                <string>com.microsoft.excel.xls</string>
+                <string>org.oasis-open.opendocument.spreadsheet</string>
+                <string>public.comma-separated-values-text</string>
+            </array>
+        </dict>
+        <!-- Plain text by extension only: public.plain-text would also claim
+             source code, logs and every other text file. -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Text Document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>txt</string>
             </array>
         </dict>
     </array>
