@@ -75,16 +75,39 @@ swift run zest convert photo.heic photo.jpg --quality 0.8   # ImageIO re-encode
 swift run zest convert photo.png  photo.webp --quality 0.75 # cwebp
 swift run zest convert photo.heic clean.heic                # lossless, offset-preserving metadata strip
 swift run zest inspect clean.heic                           # report remaining metadata
+swift run zest url "zest://convert?input=photo.heic&to=jpg&quality=0.8"   # URL-scheme automation
 ```
 
 Verified on this machine (Swift 6.4, Command Line Tools): `swift build` clean,
-`zest selftest` 13/13, and real runs —
+`zest selftest` 19/19, and real runs —
 - `voice.aiff` (206 KB) → `voice.mp3` (93.6 KB); `--target-size 40kb`
   binary-searched the bitrate to land at 37.5 KB in 6 passes.
 - `photo.heic` (5.6 MB) → `photo.jpg` with EXIF/GPS stripped; `photo.png` → WebP
   via cwebp (72 KB); and an in-place HEIC strip that zeroed the embedded 36-byte
   EXIF item while keeping the file byte-length and all `mdat` offsets identical
   (confirmed at the byte level).
+
+## Automation
+
+Zest treats automation as first-class (the subject app has none). Every surface
+drives the same `ConversionEngine.standard()`:
+
+- **CLI:** `zest convert …`, and `zest url "zest://convert?input=…&to=…"`.
+- **URL scheme:**
+  `zest://convert?input=<path>&to=<fmt>&quality=<0..1>&target-size=<size>&max-dim=<px>&keep-metadata=1&output=<path>`
+  — parsed by `ZestURL` and handled in the app's `application(_:open:)`. Only
+  `input` and `to` are required. The parser + engine path is unit-tested and
+  runnable today via `zest url …`; for Finder and other apps to route `zest://`
+  links, the scheme must be declared in a packaged `.app` (below).
+- **Shortcuts / Spotlight (AppIntents):** `ConvertFileIntent` and `ZestShortcuts`
+  expose a "Convert File" action on the same engine. It compiles and runs
+  in-process; it surfaces in the Shortcuts app once shipped inside a real `.app`
+  bundle, where the AppIntents metadata extractor runs.
+
+**Packaging note.** A shipping build wraps `ZestApp` in a `.app` whose Info.plist
+declares `LSUIElement`, `CFBundleURLTypes` (scheme `zest`), and the AppIntents
+metadata — at which point the URL scheme and the Shortcuts action are live
+system-wide. The engine, parser, and intents are all in place for that step.
 
 ## Licensing (must be honored before distribution)
 
@@ -110,14 +133,17 @@ and for dropping the sandbox to enable real automation.
 Working:
 - **`ZestKit`** — engine + two backends: `FFmpegBackend` (audio/video, single-pass
   and target-size) and `ImageBackend` (ImageIO + cwebp + offset-preserving
-  `MetadataStripper`). `swift run zest selftest` → 13/13.
-- **`zest`** — the CLI: `formats · selftest · inspect · stripinfo · convert`.
+  `MetadataStripper`). `swift run zest selftest` → 19/19.
+- **`zest`** — the CLI: `formats · selftest · inspect · stripinfo · convert · url`.
 - **`ZestApp`** — the menu-bar agent GUI (`AppKit` + `SwiftUI`): a floating,
   borderless, translucent drop panel with a **radial format wheel** that offers
   exactly the targets the engine can produce for the dropped file, runs the
   conversion off the main actor, and writes the result beside the source. Runs as
   an accessory app (no Dock icon); `swift run ZestApp`.
+- **Automation** — a `zest://convert?…` URL scheme and an AppIntents/Shortcuts
+  "Convert File" action, both on the shared engine (see **Automation**). The CLI
+  `zest url …` drives the same path.
 
-Next: the URL-scheme / Shortcuts / Services automation surfaces, determinate
-progress in the wheel, an optional global modifier-drag trigger like the subject
-app's gesture, and a document backend (to replace its double-JRE Office path).
+Next: a packaged `.app` (to make the scheme + Shortcuts action live system-wide),
+determinate progress in the wheel, an optional global modifier-drag trigger, and
+a document backend (to replace the subject app's double-JRE Office path).

@@ -1,4 +1,5 @@
 import AppKit
+import ZestKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -40,5 +41,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "OK")
         dropController.hide()
         alert.runModal()
+    }
+
+    // MARK: - URL scheme (zest://convert?input=…&to=…)
+
+    // Delivered by AppKit for registered schemes. Scheme registration itself
+    // needs an Info.plist CFBundleURLTypes entry in a packaged .app (see README).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            if let command = ZestURL.parse(url) { dropController.runURLCommand(command) }
+        }
     }
 }

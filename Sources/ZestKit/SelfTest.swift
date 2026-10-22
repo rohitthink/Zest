@@ -69,6 +69,18 @@ public func runZestSelfTests() -> (passed: Int, failed: Int, log: [String]) {
         check("png strip parses", false)
     }
 
+    // ZestURL — the URL-scheme automation surface.
+    if let command = ZestURL.parse(URL(string: "zest://convert?input=/tmp/a.wav&to=mp3&quality=0.5&target-size=1MB")!) {
+        check("zest url parses input", command.input.path == "/tmp/a.wav")
+        check("zest url parses target", command.targetID == "mp3")
+        check("zest url parses quality", command.options.quality == 0.5)
+        check("zest url parses target-size", command.options.targetSizeBytes == 1_000_000)
+    } else {
+        check("zest url parses", false)
+    }
+    check("zest url rejects non-zest scheme", ZestURL.parse(URL(string: "https://example.com/convert")!) == nil)
+    check("ByteSize parses 2MB", ByteSize.parse("2MB") == 2_000_000)
+
     return (passed, failed, log)
 }
 

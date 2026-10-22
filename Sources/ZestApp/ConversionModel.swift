@@ -18,11 +18,7 @@ final class ConversionModel: ObservableObject {
 
     @Published private(set) var state: State = .idle
 
-    private let engine: ConversionEngine = {
-        var backends: [any Converter] = [ImageBackend()]
-        if let ffmpeg = try? FFmpegBackend() { backends.append(ffmpeg) }
-        return ConversionEngine(backends: backends)
-    }()
+    private let engine = ConversionEngine.standard()
 
     /// A file was dropped — resolve its format and the reachable targets.
     func accept(_ url: URL) {
@@ -41,7 +37,7 @@ final class ConversionModel: ObservableObject {
     /// Run a conversion to the chosen target. Output lands beside the source.
     func convert(file: URL, source: MediaFormat, to target: MediaFormat) {
         state = .converting(target)
-        let output = Self.outputURL(for: file, target: target)
+        let output = defaultOutputURL(for: file, target: target)
         let request = ConversionRequest(input: file, output: output, source: source, target: target,
                                         options: ConversionOptions(quality: 0.8))
         let engine = self.engine
@@ -57,16 +53,29 @@ final class ConversionModel: ObservableObject {
 
     func reset() { state = .idle }
 
-    /// Choose a non-clobbering output path beside the input.
-    static func outputURL(for input: URL, target: MediaFormat) -> URL {
-        let directory = input.deletingLastPathComponent()
-        let stem = input.deletingPathExtension().lastPathComponent
-        var candidate = directory.appendingPathComponent(stem).appendingPathExtension(target.primaryExtension)
-        var suffix = 2
-        while FileManager.default.fileExists(atPath: candidate.path) {
-            candidate = directory.appendingPathComponent("\(stem) (\(suffix))").appendingPathExtension(target.primaryExtension)
-            suffix += 1
+    /// Run a parsed `zest://convert?…` command (the URL-scheme automation surface).
+    func run(_ command: ZestURLCommand) {
+        guard let source = MediaFormat.fromURL(command.input) else {
+            state = .failed("Unsupported input: .\(command.input.pathExtension)")
+            return
         }
-        return candidate
+        let id = command.targetID
+        guard let target = MediaFormat.catalog.first(where: { $0.id == id || $0.fileExtensions.contains(id) }) else {
+            state = .failed("Unknown target format: \(id)")
+            return
+        }
+        state = .converting(target)
+        let output = command.output ?? defaultOutputURL(for: command.input, target: target)
+        let request = ConversionRequest(input: command.input, output: output, source: source, target: target,
+                                        options: command.options)
+        let engine = self.engine
+        Task {
+            do {
+                let result = try await engine.run(request)
+                state = .done(output: result.output, bytes: result.bytes)
+            } catch {
+                state = .failed("\(error)")
+            }
+        }
     }
 }

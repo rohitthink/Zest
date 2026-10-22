@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import ZestKit
 
 /// A borderless floating panel that can still take key focus so SwiftUI controls
 /// inside it respond to clicks without activating the (accessory) app.
@@ -23,6 +24,12 @@ final class DropController {
     }
 
     func hide() { panel?.orderOut(nil) }
+
+    /// Entry point for the URL scheme: show the panel and run the command.
+    func runURLCommand(_ command: ZestURLCommand) {
+        show()
+        model.run(command)
+    }
 
     private func makePanel() -> FloatingPanel {
         let root = DropWheelView(model: model, onClose: { [weak self] in self?.hide() })

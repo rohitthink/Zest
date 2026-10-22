@@ -34,6 +34,8 @@ struct ZestCLI {
             print(MetadataStripper.diagnoseISOBMFF(data))
         case "convert":
             await runConvert(Array(args.dropFirst()))
+        case "url":
+            await runURL(Array(args.dropFirst()))
         case "-h", "--help", "help":
             printUsage()
         default:
@@ -51,7 +53,7 @@ struct ZestCLI {
             switch args[index] {
             case "--target-size":
                 index += 1
-                guard index < args.count, let bytes = parseSize(args[index]) else { fail("--target-size needs a value like 2MB, 500kb, or 800000") }
+                guard index < args.count, let bytes = ByteSize.parse(args[index]) else { fail("--target-size needs a value like 2MB, 500kb, or 800000") }
                 options.targetSizeBytes = bytes
             case "--quality":
                 index += 1
@@ -75,7 +77,7 @@ struct ZestCLI {
 
         do {
             let request = try ConversionRequest.inferring(input: input, output: output, options: options)
-            let engine = ConversionEngine(backends: defaultBackends())
+            let engine = ConversionEngine.standard()
             guard engine.canConvert(from: request.source, to: request.target) else {
                 fail("no backend converts \(request.source) -> \(request.target)")
             }
@@ -91,10 +93,20 @@ struct ZestCLI {
         }
     }
 
-    static func defaultBackends() -> [any Converter] {
-        var backends: [any Converter] = [ImageBackend()]
-        if let ffmpeg = try? FFmpegBackend() { backends.append(ffmpeg) }
-        return backends
+    static func runURL(_ args: [String]) async {
+        guard let string = args.first, let url = URL(string: string) else {
+            fail("usage: zest url \"zest://convert?input=<path>&to=<fmt>[&quality=..&target-size=..&max-dim=..&keep-metadata=1]\"")
+        }
+        guard let command = ZestURL.parse(url) else { fail("not a valid zest://convert URL") }
+        do {
+            let engine = ConversionEngine.standard()
+            FileHandle.standardError.write(Data("Converting \(command.input.lastPathComponent) -> \(command.targetID)…\n".utf8))
+            let result = try await engine.convertFile(at: command.input, toFormat: command.targetID,
+                                                      options: command.options, output: command.output)
+            print("✔ \(result.output.path)  (\(byteString(result.bytes)))")
+        } catch {
+            fail("\(error)")
+        }
     }
 
     static func inspect(_ args: [String]) {
@@ -118,18 +130,7 @@ struct ZestCLI {
         print("iptc:   \(present(kCGImagePropertyIPTCDictionary))")
     }
 
-    static func parseSize(_ string: String) -> Int? {
-        let lower = string.lowercased()
-        let units: [(String, Double)] = [
-            ("gb", 1_000_000_000), ("mb", 1_000_000), ("kb", 1_000),
-            ("g", 1_000_000_000), ("m", 1_000_000), ("k", 1_000), ("b", 1),
-        ]
-        for (suffix, multiplier) in units where lower.hasSuffix(suffix) {
-            let number = lower.dropLast(suffix.count).trimmingCharacters(in: .whitespaces)
-            if let value = Double(number) { return Int(value * multiplier) }
-        }
-        return Int(lower)
-    }
+    // Byte-size parsing lives in ZestKit's ByteSize.parse (shared with ZestURL).
 
     static func byteString(_ bytes: Int) -> String {
         let units = ["B", "KB", "MB", "GB"]
@@ -153,6 +154,7 @@ struct ZestCLI {
           zest selftest
           zest inspect <file>
           zest convert <input> <output> [options]
+          zest url "zest://convert?input=<path>&to=<fmt>[&quality=..&target-size=..]"
 
         OPTIONS:
           --target-size <size>   iterate encode to hit a size (e.g. 2MB, 500kb, 800000)
