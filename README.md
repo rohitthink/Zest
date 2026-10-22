@@ -45,8 +45,8 @@ idea — fast, local, drag-and-convert — and fixes the limitations:
   the subject app paywalls, here free.
 - **`ToolLocator` / `ProcessRunner`** — find external tools; run them deadlock-free.
 
-Backends (same protocol): `FFmpegBackend` and `ImageBackend` ship today.
-Planned: `DocumentBackend` (Office/PDF) and `ArchiveBackend`.
+Backends (same protocol): `FFmpegBackend`, `ImageBackend`, and `DocumentBackend`
+ship today. Planned: `ArchiveBackend`.
 
 - **`ImageBackend`** — HEIC/JPEG/PNG/TIFF/GIF/BMP via Apple's ImageIO, WebP via
   `cwebp`, orientation baked in, optional downscale. Pairs with `MetadataStripper`
@@ -57,6 +57,29 @@ Planned: `DocumentBackend` (Office/PDF) and `ArchiveBackend`.
   zeroes the Exif/XMP item payloads while leaving every box size and `iloc` offset
   (and the whole `mdat`) untouched. A decode check gates the result; if the
   surgical strip can't be validated it falls back to a metadata-dropping re-encode.
+- **`DocumentBackend`** — Office/PDF **without bundling a runtime**. Apple's
+  `NSAttributedString` engine reads/writes docx · doc · rtf · rtfd · odt · html ·
+  txt in-process and renders any of them to PDF (CoreText pagination); `PDFKit`
+  does PDF→image, PDF→text, and image→PDF. Heavy formats (pptx · xlsx · ods)
+  route to a **LibreOffice headless** binary located at runtime — optional, never
+  bundled. See the evaluation below.
+
+### Document conversion: native vs LibreOffice
+
+The subject app ships a full **JRE 21 twice** (arm64 *and* x86_64) plus Apache POI
+and PDFBox — roughly 59% of its download — just to convert Office files. Zest
+rejects that trade and splits the problem:
+
+| Need | Zest's path | Dependency |
+|---|---|---|
+| docx·doc·rtf·rtfd·odt·html·txt ↔ each other, and → PDF | `NSAttributedString` + CoreText, in-process | none (system framework) |
+| PDF → PNG/JPG/TIFF, PDF → text, image → PDF | `PDFKit` + ImageIO | none (system framework) |
+| pptx·xlsx·ods·xls·csv (full-fidelity office) | `soffice --headless --convert-to` | **LibreOffice, located at runtime — never bundled** |
+
+So the common cases are native and weightless; the heavy formats are delegated to
+a *system* LibreOffice when present (and reported as unavailable when not),
+instead of shipping a private Java stack. Net: no bundled runtime, no duplicate
+architecture slice, and the engine stays one `Converter`.
 
 ## Build & run
 
@@ -73,6 +96,7 @@ swift run zest convert in.wav out.mp3 --quality 0.7
 swift run zest convert in.mov out.mp4 --target-size 8MB
 swift run zest convert photo.heic photo.jpg --quality 0.8   # ImageIO re-encode
 swift run zest convert photo.png  photo.webp --quality 0.75 # cwebp
+swift run zest convert report.docx report.pdf              # DocumentBackend (native, no JRE)
 swift run zest convert photo.heic clean.heic                # lossless, offset-preserving metadata strip
 swift run zest inspect clean.heic                           # report remaining metadata
 swift run zest url "zest://convert?input=photo.heic&to=jpg&quality=0.8"   # URL-scheme automation
@@ -81,13 +105,15 @@ swift run zest url "zest://convert?input=photo.heic&to=jpg&quality=0.8"   # URL-
 ```
 
 Verified on this machine (Swift 6.4, Command Line Tools): `swift build` clean,
-`zest selftest` 19/19, and real runs —
+`zest selftest` 27/27, and real runs —
 - `voice.aiff` (206 KB) → `voice.mp3` (93.6 KB); `--target-size 40kb`
   binary-searched the bitrate to land at 37.5 KB in 6 passes.
 - `photo.heic` (5.6 MB) → `photo.jpg` with EXIF/GPS stripped; `photo.png` → WebP
   via cwebp (72 KB); and an in-place HEIC strip that zeroed the embedded 36-byte
   EXIF item while keeping the file byte-length and all `mdat` offsets identical
   (confirmed at the byte level).
+- `note.txt → .rtf → .docx → .pdf → .txt` preserved the text (NSAttributedString
+  + PDFKit, no bundled runtime); PDF→PNG and image→PDF produced valid output.
 
 ## Automation
 
@@ -137,9 +163,10 @@ and for dropping the sandbox to enable real automation.
 ## Status
 
 Working:
-- **`ZestKit`** — engine + two backends: `FFmpegBackend` (audio/video, single-pass
-  and target-size) and `ImageBackend` (ImageIO + cwebp + offset-preserving
-  `MetadataStripper`). `swift run zest selftest` → 19/19.
+- **`ZestKit`** — engine + three backends: `FFmpegBackend` (audio/video,
+  single-pass and target-size), `ImageBackend` (ImageIO + cwebp + offset-preserving
+  `MetadataStripper`), and `DocumentBackend` (native Office/PDF via
+  NSAttributedString + PDFKit; LibreOffice optional). `swift run zest selftest` → 27/27.
 - **`zest`** — the CLI: `formats · selftest · inspect · stripinfo · convert · url`.
 - **`ZestApp`** — the menu-bar agent GUI (`AppKit` + `SwiftUI`): a floating,
   borderless, translucent drop panel with a **radial format wheel** that offers
@@ -150,6 +177,6 @@ Working:
   "Convert File" action, both on the shared engine (see **Automation**). The CLI
   `zest url …` drives the same path.
 
-Next: a packaged `.app` (to make the scheme + Shortcuts action live system-wide),
-determinate progress in the wheel, an optional global modifier-drag trigger, and
-a document backend (to replace the subject app's double-JRE Office path).
+Next: the AppIntents action surfaced via an Xcode build, determinate progress in
+the wheel, an optional global modifier-drag trigger, and an archive backend
+(zip/tar/gzip).

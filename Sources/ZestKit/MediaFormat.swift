@@ -64,5 +64,24 @@ public struct MediaFormat: Sendable, Hashable, CustomStringConvertible {
         MediaFormat(id: "mkv",  category: .video, fileExtensions: ["mkv"]),
         MediaFormat(id: "webm", category: .video, fileExtensions: ["webm"]),
         MediaFormat(id: "avi",  category: .video, fileExtensions: ["avi"]),
+        // PDF
+        MediaFormat(id: "pdf",  category: .pdf, fileExtensions: ["pdf"], uti: "com.adobe.pdf"),
+        // Documents
+        MediaFormat(id: "docx", category: .document, fileExtensions: ["docx"], uti: "org.openxmlformats.wordprocessingml.document"),
+        MediaFormat(id: "doc",  category: .document, fileExtensions: ["doc"], uti: "com.microsoft.word.doc"),
+        MediaFormat(id: "rtf",  category: .document, fileExtensions: ["rtf"], uti: "public.rtf"),
+        MediaFormat(id: "rtfd", category: .document, fileExtensions: ["rtfd"]),
+        MediaFormat(id: "odt",  category: .document, fileExtensions: ["odt"], uti: "org.oasis-open.opendocument.text"),
+        MediaFormat(id: "html", category: .document, fileExtensions: ["html", "htm"], uti: "public.html"),
+        MediaFormat(id: "txt",  category: .document, fileExtensions: ["txt"], uti: "public.plain-text"),
+        MediaFormat(id: "md",   category: .document, fileExtensions: ["md", "markdown"], uti: "net.daringfireball.markdown"),
+        MediaFormat(id: "pptx", category: .document, fileExtensions: ["pptx"], uti: "org.openxmlformats.presentationml.presentation"),
+        MediaFormat(id: "ppt",  category: .document, fileExtensions: ["ppt"], uti: "com.microsoft.powerpoint.ppt"),
+        // Spreadsheets
+        MediaFormat(id: "xlsx", category: .spreadsheet, fileExtensions: ["xlsx"], uti: "org.openxmlformats.spreadsheetml.sheet"),
+        MediaFormat(id: "xls",  category: .spreadsheet, fileExtensions: ["xls"], uti: "com.microsoft.excel.xls"),
+        MediaFormat(id: "ods",  category: .spreadsheet, fileExtensions: ["ods"], uti: "org.oasis-open.opendocument.spreadsheet"),
+        MediaFormat(id: "csv",  category: .spreadsheet, fileExtensions: ["csv"], uti: "public.comma-separated-values-text"),
+        MediaFormat(id: "tsv",  category: .spreadsheet, fileExtensions: ["tsv"], uti: "public.tab-separated-values-text"),
     ]
 }

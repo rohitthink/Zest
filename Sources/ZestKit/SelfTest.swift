@@ -81,6 +81,19 @@ public func runZestSelfTests() -> (passed: Int, failed: Int, log: [String]) {
     check("zest url rejects non-zest scheme", ZestURL.parse(URL(string: "https://example.com/convert")!) == nil)
     check("ByteSize parses 2MB", ByteSize.parse("2MB") == 2_000_000)
 
+    // DocumentBackend catalog + routing (native paths — no external tools needed).
+    check("pdf format is category pdf", MediaFormat.fromExtension("pdf")?.category == .pdf)
+    check("docx is a document", MediaFormat.fromExtension("docx")?.category == .document)
+    check("xlsx is a spreadsheet", MediaFormat.fromExtension("xlsx")?.category == .spreadsheet)
+    let engineDoc = ConversionEngine.standard()
+    let txt = MediaFormat.fromExtension("txt")!, rtf = MediaFormat.fromExtension("rtf")!
+    let pdf = MediaFormat.fromExtension("pdf")!, pngFmt = MediaFormat.fromExtension("png")!
+    check("engine routes txt -> rtf", engineDoc.canConvert(from: txt, to: rtf))
+    check("engine routes txt -> pdf", engineDoc.canConvert(from: txt, to: pdf))
+    check("engine routes pdf -> txt", engineDoc.canConvert(from: pdf, to: txt))
+    check("engine routes pdf -> png", engineDoc.canConvert(from: pdf, to: pngFmt))
+    check("engine routes png -> pdf", engineDoc.canConvert(from: pngFmt, to: pdf))
+
     return (passed, failed, log)
 }
 

@@ -35,7 +35,7 @@ public extension ConversionEngine {
     /// available. Used by the CLI, the GUI, the URL scheme, and AppIntents so
     /// every surface shares one engine definition.
     static func standard() -> ConversionEngine {
-        var backends: [any Converter] = [ImageBackend()]
+        var backends: [any Converter] = [ImageBackend(), DocumentBackend()]
         if let ffmpeg = try? FFmpegBackend() { backends.append(ffmpeg) }
         return ConversionEngine(backends: backends)
     }
