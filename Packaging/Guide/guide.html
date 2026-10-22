@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Zest — Read Me First</title>
+<style>
+  :root {
+    --cream: #FFE9D2; --wash: #FFF8F0; --soft: #FFF1E3; --line: #FFE0BF;
+    --ink: #2A1609; --ink-soft: #7A3E12; --accent: #C2410C; --peel: #FF8A1F;
+    --code: #4A2410;
+  }
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; color: var(--ink); background: #FFFFFF;
+    font: 13.5px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  }
+  h1, h2, h3, .display { font-family: ui-rounded, "SF Pro Rounded", -apple-system, sans-serif; letter-spacing: -0.01em; }
+  h1 { font-size: 34px; margin: 0; line-height: 1.1; }
+  h2 { font-size: 22px; margin: 0 0 10px; color: var(--ink); }
+  h3 { font-size: 15.5px; margin: 18px 0 6px; }
+  p { margin: 0 0 10px; }
+  a { color: var(--accent); text-decoration: none; }
+  code, kbd, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+  code { background: var(--soft); color: var(--code); padding: 1px 6px; border-radius: 6px; }
+  kbd {
+    display: inline-block; min-width: 20px; text-align: center; padding: 1px 6px; border-radius: 6px;
+    background: #fff; border: 1px solid var(--line); box-shadow: 0 1px 0 var(--line); color: var(--ink);
+  }
+  .muted { color: var(--ink-soft); }
+  .small { font-size: 12px; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(160deg, #FFF6EA 0%, var(--cream) 55%, #FFD7AE 100%);
+    border-radius: 26px; padding: 34px 34px 28px; display: flex; gap: 26px; align-items: center; margin-bottom: 18px;
+  }
+  .cover img { width: 132px; height: 132px; flex: none; }
+  .cover .tag { font-size: 16px; color: var(--ink-soft); margin-top: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .chip { background: rgba(255,255,255,0.75); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+  section { margin: 0 0 18px; }
+  .card { background: var(--wash); border-radius: 18px; padding: 16px 18px; margin: 0 0 12px; }
+  .card.warn { background: #FFF1E3; border: 1.5px solid #FFC489; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; break-inside: avoid; page-break-inside: avoid; }
+  h2 { break-after: avoid; page-break-after: avoid; }
+  figure, .card, .cmd, ol.steps > li { break-inside: avoid; page-break-inside: avoid; }
+  .shot { width: 100%; border-radius: 14px; display: block; }
+  .shot.small { max-width: 300px; margin: 0 auto; }
+  figure { margin: 0; }
+  figcaption { font-size: 11.5px; color: var(--ink-soft); text-align: center; margin-top: 6px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 12px 40px; }
+  ol.steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: -1px; width: 27px; height: 27px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700; text-align: center; line-height: 27px;
+    font-family: ui-rounded, -apple-system, sans-serif;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td:first-child { white-space: nowrap; font-weight: 600; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .ok { background: #E3F2D9; color: #2F5D1E; }
+  .need { background: #FFE0C2; color: #8A3A00; }
+  .break { break-before: page; page-break-before: always; }
+  .avoid { break-inside: avoid; page-break-inside: avoid; }
+  .cmd { background: #2A1609; color: #FFE9D2; border-radius: 10px; padding: 9px 12px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; margin: 6px 0 10px; }
+  .footer { margin-top: 18px; font-size: 11.5px; color: var(--ink-soft); text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <img src="img/icon.png" alt="Zest icon">
+  <div>
+    <h1>Zest</h1>
+    <div class="tag display">Drop a file, pick a format, done. Or paste a link and save it.</div>
+    <div class="chips">
+      <span class="chip">Images · audio · video · documents</span>
+      <span class="chip">YouTube · Instagram · Facebook · Pinterest</span>
+      <span class="chip">Free · works offline · no account</span>
+    </div>
+  </div>
+</div>
+
+<section>
+  <p>Zest is a tiny converter that lives in your <b>menu bar</b> (top-right of the screen, next to the clock). Drag any file onto it and an
+  <b>orange slice</b> pops up — each slice is a format you can turn the file into. Pick one and the new file appears right next to the
+  original. It can also save videos, audio and images from links. Everything happens on your Mac; nothing is uploaded.</p>
+</section>
+
+<section class="avoid">
+  <h2>1 · Install it (2 minutes)</h2>
+  <div class="card">
+    <ol class="steps">
+      <li><b>Open the Zest disk image</b> you received, and drag <b>Zest</b> onto the <b>Applications</b> folder next to it.</li>
+      <li><b>Open Zest</b> from Applications. The first time, macOS will stop it with a message like
+        <i>“Apple could not verify ‘Zest’ is free of malware”</i>. That's expected — Zest is a friend-made app, not from the App Store,
+        so it isn't registered with Apple. Click <b>Done</b>.</li>
+      <li>Open <b>System Settings → Privacy &amp; Security</b>, scroll down to the <b>Security</b> part, and next to
+        <i>“‘Zest’ was blocked to protect your Mac”</i> click <b>Open Anyway</b>. Confirm with <b>Open Anyway</b> and your password or Touch ID.
+        <span class="muted">On macOS 13 or 14 you can instead right-click Zest in Applications and choose <b>Open</b>.</span></li>
+      <li>That's it — macOS remembers your choice. Look for the <b>orange slice</b> in your menu bar.</li>
+    </ol>
+  </div>
+  <p class="small muted">Needs macOS 13 Ventura or newer. Works on both Apple silicon (M-series) and Intel Macs.
+  Comfortable with Terminal? Instead of steps 2–3 you can run <code>xattr -dr com.apple.quarantine /Applications/Zest.app</code> once.</p>
+</section>
+
+<section class="avoid">
+  <h2>2 · Unlock audio, video and link downloads <span class="muted small">(optional, one time)</span></h2>
+  <p>Photos and documents work straight away. A few free tools add the rest:</p>
+  <div class="card">
+    <table>
+      <tr><th>What you want</th><th>Works out of the box?</th><th>Free tool it uses</th></tr>
+      <tr><td>Photos: HEIC, JPG, PNG, TIFF, GIF, BMP, photo → PDF</td><td><span class="pill ok">Yes</span></td><td>built into macOS</td></tr>
+      <tr><td>Documents: Word, RTF, HTML, text ↔ PDF</td><td><span class="pill ok">Yes</span></td><td>built into macOS</td></tr>
+      <tr><td>Audio &amp; video (MP3, M4A, WAV, MP4, MOV…)</td><td><span class="pill need">Needs ffmpeg</span></td><td><code>ffmpeg</code></td></tr>
+      <tr><td>WebP images</td><td><span class="pill need">Needs webp</span></td><td><code>webp</code></td></tr>
+      <tr><td>Downloading from links</td><td><span class="pill need">Needs yt-dlp + ffmpeg</span></td><td><code>yt-dlp</code></td></tr>
+      <tr><td>Excel, PowerPoint, spreadsheets</td><td><span class="pill need">Needs LibreOffice</span></td><td>LibreOffice</td></tr>
+    </table>
+  </div>
+  <ol class="steps">
+    <li>Install <b>Homebrew</b> (the standard free installer for Mac tools): go to <a href="https://brew.sh">brew.sh</a>, copy the one
+      command shown at the top, paste it into <b>Terminal</b> (in Applications → Utilities) and press Return.</li>
+    <li>Then paste this and press Return:
+      <div class="cmd">brew install ffmpeg yt-dlp webp</div>
+      For Excel/PowerPoint files also: <code>brew install --cask libreoffice</code></li>
+    <li>In Zest, open <b>Settings → Advanced</b>: each tool should now say <span class="pill ok">Found</span>.</li>
+  </ol>
+  <p class="small muted">Tip: run <code>brew upgrade yt-dlp</code> now and then — sites change and yt-dlp keeps up.</p>
+</section>
+
+<section>
+  <div class="avoid">
+  <h2>3 · Convert a file</h2>
+  <div class="grid2">
+    <div>
+      <ol class="steps">
+        <li><b>Drag a file</b> (or several) onto the Zest drop zone. If it's hidden, click the menu-bar slice → <b>Drop zone</b>,
+          or just drop the file onto the menu-bar slice itself.</li>
+        <li>While you're still dragging, the <b>orange slice</b> opens. Each segment is a format. <b>Let go over a segment</b> to convert —
+          or drop anywhere and then click one. Number keys <kbd>1</kbd>–<kbd>9</kbd> work too.</li>
+        <li>The new file appears <b>next to the original</b> (change this in Settings). Click <b>Show in Finder</b> to see it.</li>
+      </ol>
+      <h3>Good to know</h3>
+      <p><b>Strip</b> (on photos) removes the location and camera details without changing a single pixel — handy before sharing.
+      It saves a copy named like <code>photo-clean.jpg</code>.</p>
+      <p><b>Lots of files at once?</b> Drop them together; the slice offers formats they can all become. Files already in that format are left alone.</p>
+      <p><b>From Finder:</b> right-click a file → <b>Open With → Zest</b>.</p>
+      <p>Zest never overwrites anything: if the name is taken you get <code>photo (2).jpg</code>.</p>
+    </div>
+    <div>
+      <figure><img class="shot" src="img/drop-idle.png" alt="Drop zone"><figcaption>The drop zone</figcaption></figure>
+      <figure style="margin-top:10px"><img class="shot" src="img/wheel-image-hover.png" alt="Format wheel"><figcaption>The slice: let go over a format</figcaption></figure>
+    </div>
+  </div>
+  </div>
+</section>
+
+<section class="avoid">
+  <div class="grid2">
+    <figure><img class="shot" src="img/done-single.png" alt="Done card"><figcaption>Done — with the new size and how much smaller it got</figcaption></figure>
+    <div class="card" style="margin-top:8px">
+      <h3 style="margin-top:0">Keyboard</h3>
+      <table>
+        <tr><td><kbd>1</kbd>–<kbd>9</kbd>, <kbd>0</kbd></td><td>pick a slice</td></tr>
+        <tr><td><kbd>Return</kbd></td><td>pick the highlighted slice</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>back out / close the drop zone</td></tr>
+        <tr><td><kbd>⌘</kbd><kbd>V</kbd></td><td>paste a link (or files) into the drop zone</td></tr>
+        <tr><td><kbd>⌘</kbd><kbd>O</kbd></td><td>choose files to convert</td></tr>
+        <tr><td><kbd>⌘</kbd><kbd>,</kbd></td><td>Settings (from the menu)</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="avoid">
+  <h2>4 · Save from a link</h2>
+  <div class="grid2">
+    <div>
+      <ol class="steps">
+        <li>Copy a link from YouTube, Instagram, Facebook, Pinterest (and many other sites).</li>
+        <li>Click the menu-bar slice and <b>paste it into “Paste a link to download…”</b> — or open the drop zone and press
+          <kbd>⌘</kbd><kbd>V</kbd>, or drag the link from your browser onto the drop zone.</li>
+        <li>Zest reads the link for a second, then the slice shows <b>only the options that link really has</b>. Pick one.</li>
+        <li>The file lands in your <b>Downloads</b> folder, named after the video.</li>
+      </ol>
+    </div>
+    <figure><img class="shot" src="img/link-wheel.png" alt="Download choices"><figcaption>Choices for a YouTube video</figcaption></figure>
+  </div>
+  </div>
+  <div class="card avoid">
+    <table>
+      <tr><th>Slice</th><th>What you get</th></tr>
+      <tr><td>MP4 4K <span class="muted">(Best)</span></td><td>Highest quality video with sound. Above 1080p, YouTube uses a newer format (AV1/VP9): plays in QuickTime on M3-or-newer Macs; otherwise use the free <b>VLC</b> or <b>IINA</b> player.</td></tr>
+      <tr><td>MP4 1080p <span class="muted">(Plays everywhere)</span></td><td>H.264 video — plays on every phone, TV and app. Shown when it differs from Best.</td></tr>
+      <tr><td>M4A</td><td>Just the audio, exactly as the site has it — the best audio quality available.</td></tr>
+      <tr><td>MP3</td><td>Audio as MP3 320 kbps, for older players and car stereos.</td></tr>
+      <tr><td>WAV</td><td>Uncompressed audio for editing apps.</td></tr>
+      <tr><td>Image</td><td>The full-size picture from a photo post (e.g. Pinterest).</td></tr>
+    </table>
+    <p class="small muted" style="margin:8px 0 0">Honest note: these sites only keep compressed audio (about 128–160 kbps). MP3 320 and WAV can't add back
+    quality the site never had — they're for compatibility and editing. M4A is the original.</p>
+  </div>
+  <div class="grid2 avoid">
+    <div>
+      <h3>Private posts or “please sign in”</h3>
+      <p>Some posts (Instagram stories, some reels, members-only videos) need you to be signed in. Go to <b>Settings → Output → Use sign-in from</b>
+      and pick the browser you're signed in with. Safari needs Zest to have <b>Full Disk Access</b> (System Settings → Privacy &amp; Security);
+      Chrome, Brave and Edge will ask for Keychain access once. Leave it <b>Off</b> if you don't need it.</p>
+      <p class="small muted">Only save what you have the right to — your own posts, Creative-Commons videos, or with permission. Each site's terms apply.</p>
+    </div>
+    <figure><img class="shot" src="img/link-failed.png" alt="Sign-in needed"><figcaption>If a site wants a sign-in, the Settings button takes you there</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <div class="avoid">
+  <h2>5 · The menu and Settings</h2>
+  <div class="grid2">
+    <div>
+      <p><b>Click</b> the orange slice in the menu bar for the Zest menu: convert a file, paste a link, your recently made files
+      (click one to show it in Finder), the drop zone, Settings and Quit. <b>Right-click</b> it for a plain menu, including
+      <b>Download Link from Clipboard</b>.</p>
+      <h3>Settings worth knowing</h3>
+      <p><b>General:</b> where files go — next to the original (default), your Downloads folder, or ask every time; quality
+      (smaller files ↔ sharper results); removing location &amp; camera info (on by default); launch at login.</p>
+      <p><b>Output:</b> shrink big photos and videos to a longest side (4096 / 2048 / 1080 px), show in Finder or play a sound when done,
+      and browser sign-in for links.</p>
+      <p><b>Advanced:</b> shows which helper tools Zest found (see section 2).</p>
+    </div>
+    <figure><img class="shot small" src="img/menu.png" alt="Zest menu"><figcaption>The Zest menu</figcaption></figure>
+  </div>
+  </div>
+  <div class="grid2" style="margin-top:8px">
+    <figure><img class="shot" src="img/settings-general.png" alt="Settings General"><figcaption>Settings → General</figcaption></figure>
+    <figure><img class="shot" src="img/settings-advanced.png" alt="Settings Advanced"><figcaption>Settings → Advanced: helper tools</figcaption></figure>
+  </div>
+</section>
+
+<section class="avoid">
+  <h2>6 · If something's off</h2>
+  <div class="card">
+    <table>
+      <tr><td>“Zest can't be opened” / “not verified”</td><td>Do step 1.3 above (Privacy &amp; Security → Open Anyway). If it says “damaged”, run the Terminal line from section 1.</td></tr>
+      <tr><td>I don't see Zest anywhere</td><td>It has no Dock icon — look for the orange slice in the menu bar. Opening the app again shows the drop zone.</td></tr>
+      <tr><td>Videos or audio offer no formats</td><td>Install <code>ffmpeg</code> (section 2), then check Settings → Advanced.</td></tr>
+      <tr><td>“Downloading links needs yt-dlp”</td><td><code>brew install yt-dlp ffmpeg</code></td></tr>
+      <tr><td>A site “wants you signed in”</td><td>Settings → Output → Use sign-in from (section 4).</td></tr>
+      <tr><td>A download stopped working</td><td>Sites change often: <code>brew upgrade yt-dlp</code>, then try again.</td></tr>
+      <tr><td>Where did my file go?</td><td>Next to the original by default; links go to Downloads. The menu's “Recently squeezed” list shows them — click to reveal.</td></tr>
+      <tr><td>Uninstall</td><td>Quit from the menu, then drag Zest from Applications to the Trash.</td></tr>
+    </table>
+  </div>
+  <div class="footer">Zest 0.2 · made with care · enjoy the squeeze 🍊</div>
+</section>
+
+</body>
+</html>

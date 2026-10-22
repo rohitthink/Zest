@@ -2,16 +2,19 @@
 # Package the SwiftPM ZestApp executable into a real macOS .app bundle so the
 # zest:// URL scheme and the Shortcuts action register system-wide.
 # Usage: Scripts/package-app.sh [debug|release]
+# Builds a universal binary (Apple silicon + Intel) so the app can be shared;
+# set ZEST_ARCHS=native for a faster build for this Mac only.
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="${1:-release}"
 DIST="$ROOT/dist"
 APP="$DIST/Zest.app"
+if [ "${ZEST_ARCHS:-universal}" = "native" ]; then ARCHS=(); else ARCHS=(--arch arm64 --arch x86_64); fi
 
-echo ">> building ZestApp + zest CLI ($CONFIG)"
-swift build -c "$CONFIG" --product ZestApp --package-path "$ROOT"
-swift build -c "$CONFIG" --product zest --package-path "$ROOT"
-BINDIR="$(swift build -c "$CONFIG" --product ZestApp --package-path "$ROOT" --show-bin-path)"
+echo ">> building ZestApp + zest CLI ($CONFIG, ${ZEST_ARCHS:-universal})"
+swift build -c "$CONFIG" "${ARCHS[@]}" --product ZestApp --package-path "$ROOT"
+swift build -c "$CONFIG" "${ARCHS[@]}" --product zest --package-path "$ROOT"
+BINDIR="$(swift build -c "$CONFIG" "${ARCHS[@]}" --product ZestApp --package-path "$ROOT" --show-bin-path)"
 BIN="$BINDIR/ZestApp"
 [ -x "$BIN" ] || { echo "build output not found: $BIN"; exit 1; }
 [ -x "$BINDIR/zest" ] || { echo "build output not found: $BINDIR/zest"; exit 1; }
@@ -23,6 +26,7 @@ cp "$BIN" "$APP/Contents/MacOS/ZestApp"
 # The CLI ships inside the app; Settings › Shortcuts shows the one-line symlink.
 cp "$BINDIR/zest" "$APP/Contents/Helpers/zest"
 cp "$ROOT/Packaging/Info.plist" "$APP/Contents/Info.plist"
+cp "$ROOT/Packaging/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"   # source: Packaging/Icon/draw-icon.swift
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 # AppIntents metadata — only available with a full Xcode toolchain; the URL

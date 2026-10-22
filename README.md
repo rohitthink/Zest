@@ -105,7 +105,8 @@ swift run zest url "zest://convert?input=photo.heic&to=jpg&quality=0.8"   # URL-
 swift run zest download "https://youtu.be/aqz-KE-bpKQ"             # list what a link offers (needs yt-dlp)
 swift run zest download "https://youtu.be/aqz-KE-bpKQ" --as mp3    # best · compatible · m4a · mp3 · wav · image
 
-./Scripts/package-app.sh    # -> dist/Zest.app; registers the zest:// scheme system-wide
+./Scripts/package-app.sh    # -> dist/Zest.app (universal); registers the zest:// scheme system-wide
+./Scripts/make-dmg.sh       # -> dist/Zest-<version>.dmg to share: app + Applications link + "Read Me First.pdf"
 ```
 
 Verified on this machine (Swift 6.4, Command Line Tools): `swift build` clean,
@@ -183,6 +184,21 @@ AppIntents "Convert File" action additionally needs a full Xcode build (the
 does not. The `zest` CLI ships inside the bundle at `Contents/Helpers/zest`;
 put it on your PATH once with
 `sudo mkdir -p /usr/local/bin && sudo ln -sf "/Applications/Zest.app/Contents/Helpers/zest" /usr/local/bin/zest`.
+
+## Sharing with friends
+
+`Scripts/make-dmg.sh` builds `dist/Zest-<version>.dmg`, ready to AirDrop:
+the universal app (Apple silicon + Intel, macOS 13+), an Applications
+shortcut, and **Read Me First.pdf**, a friendly guide rendered from
+`Packaging/Guide/guide.html` (screenshots in `Packaging/Guide/img`, made with
+`ZestApp --snapshot`). The app icon is drawn in code by
+`Packaging/Icon/draw-icon.swift` and compiled into `Packaging/AppIcon.icns`.
+
+The build is ad-hoc signed, not notarized, so on a friend's Mac Gatekeeper
+blocks the first launch ("Apple could not verify…"). The guide walks them
+through **System Settings › Privacy & Security › Open Anyway** (or
+`xattr -dr com.apple.quarantine /Applications/Zest.app`). A Developer ID
+certificate plus notarization removes that step.
 
 ## Licensing (must be honored before distribution)
 
