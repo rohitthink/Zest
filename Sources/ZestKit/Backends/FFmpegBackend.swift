@@ -103,8 +103,7 @@ public struct FFmpegBackend: Converter {
     // MARK: - Target-size compression (the differentiator)
 
     /// Binary-search the bitrate so the output lands within tolerance of a byte
-    /// budget — the feature the subject app gates behind its paywall. Zest ships
-    /// it with no metering.
+    /// budget.
     private func targetSizeEncode(_ request: ConversionRequest, targetBytes: Int, start: Date, progress: ProgressHandler?) throws -> ConversionResult {
         guard let duration = probeDurationSeconds(request.input), duration > 0 else {
             throw ConversionError.io("could not read media duration for target-size encode")

@@ -1,7 +1,7 @@
 # Zest
 
 A clean-room macOS file-conversion toolkit — the "feature-rich, flaw-fixed"
-reimagining of a zero-click converter, built from a behavioural/format/protocol
+reimagining of a drag-and-drop converter, built from a behavioural/format/protocol
 spec rather than from anyone else's code.
 
 > **Clean-room notice.** Zest is an independent reimplementation. It contains no
@@ -13,15 +13,13 @@ spec rather than from anyone else's code.
 ## Why it exists
 
 The subject app is a thin, well-polished Swift shell that orchestrates
-open-source engines, wrapped in a one-time-unlock paywall that meters free use
-via a Keychain + UserDefaults counter, and it exposes **no** automation surface
+open-source engines, and it exposes **no** automation surface
 (no CLI, URL scheme, Services, Shortcuts, or AppleScript). Zest keeps the good
 idea — fast, local, drag-and-convert — and fixes the limitations:
 
 | Subject app | Zest |
 |---|---|
 | No scripting of any kind | **CLI first** (this scaffold), then URL scheme + Shortcuts/AppIntents + Services |
-| Free tier metered by a reinstall-proof counter | **No artificial metering** — one honest purchase or fully free |
 | Ships a full JRE **twice** (arm64 + x86_64) in an arm64-only app | Native/arm64-first; heavy doc engines stay out of the hot path |
 | Engine choices hidden behind the binary | Pluggable `Converter` backends, explicit and testable |
 | Metadata handling implicit | Metadata stripped by default (privacy-first), opt-out with `--keep-metadata` |
@@ -41,8 +39,7 @@ idea — fast, local, drag-and-convert — and fixes the limitations:
 - **`Converter`** — the backend protocol: `supports(from:to:)` + `convert(_:progress:)`, `Sendable`, async.
 - **`ConversionEngine`** — routes a `ConversionRequest` to the first capable backend.
 - **`FFmpegBackend`** — audio/video via a system `ffmpeg`, including **target-size
-  compression** (binary-searches the bitrate to hit a byte budget) — the feature
-  the subject app paywalls, here free.
+  compression** (binary-searches the bitrate to hit a byte budget).
 - **`ToolLocator` / `ProcessRunner`** — find external tools; run them deadlock-free.
 
 Backends (same protocol): `FFmpegBackend`, `ImageBackend`, and `DocumentBackend`
